@@ -847,7 +847,7 @@ MonoBehaviour:
     hasUpgradedBrainParametersWithActionSpec: 1
   m_Model: {fileID: 0}
   m_InferenceDevice: 0
-  m_BehaviorType: 1
+  m_BehaviorType: 0
   m_BehaviorName: My Behavior
   TeamId: 0
   m_UseChildSensors: 1
@@ -871,18 +871,14 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 50000
   moveForce: 15
-  turnTorque: 30
+  turnTorque: 5
   targetTransform: {fileID: 2017429539}
-  obstacleTransforms:
-  - {fileID: 1258313266}
-  - {fileID: 1338227158}
-  - {fileID: 910327288}
-  spawnAreaCenter: {x: 0, y: 0, z: 0}
-  spawnAreaExtents: {x: 20, y: 5, z: 20}
-  minActiveObstacles: 2
-  maxActiveObstacles: 5
-  minObstacleScale: {x: 0.8, y: 1, z: 0.8}
-  maxObstacleScale: {x: 3, y: 4, z: 3}
+  arenaSize: {x: 20, y: 10, z: 20}
+  arenaCenter: {x: 0, y: 0, z: 0}
+  minObstacles: 3
+  maxObstacles: 8
+  minScale: {x: 1, y: 1, z: 1}
+  maxScale: {x: 3, y: 5, z: 3}
 --- !u!114 &1572337461
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -907,7 +903,7 @@ MonoBehaviour:
     hasUpgradedBrainParametersWithActionSpec: 1
   m_Model: {fileID: 0}
   m_InferenceDevice: 0
-  m_BehaviorType: 1
+  m_BehaviorType: 0
   m_BehaviorName: DroneBehavior
   TeamId: 0
   m_UseChildSensors: 1
@@ -936,7 +932,7 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 1
+  m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 0
