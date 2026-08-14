@@ -14,11 +14,11 @@ public class DroneAgent : Agent
     [Header("Target Reference")]
     [SerializeField] private Transform targetTransform;
 
-    [Header("Arena Bounds (Local Space)")]
+    [Header("Arena Bounds")]
     [SerializeField] private Vector3 arenaSize = new Vector3(20f, 10f, 20f);
     [SerializeField] private Vector3 arenaCenter = Vector3.zero;
 
-    [Header("Procedural Obstacles")]
+    [Header("Obstacles")]
     [SerializeField] private int minObstacles = 3;
     [SerializeField] private int maxObstacles = 8;
     [SerializeField] private Vector3 minScale = new Vector3(1f, 1f, 1f);
@@ -31,20 +31,19 @@ public class DroneAgent : Agent
     public override void Initialize()
     {
         rb = GetComponent<Rigidbody>();
-        rb.useGravity = false; // Prevents initial floor crashes
+        rb.useGravity = false;
     }
 
     public override void OnEpisodeBegin()
     {
-        // 1. Reset Physics
+        // zero out momentum from previous attempt
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
-        // 2. Clear Old Obstacles & Respawn New Ones
         ClearObstacles();
         GenerateProceduralObstacles();
 
-        // 3. Reset Drone Position (Left Spawn Zone)
+        // spawn agent on left flank with random position offset to avoid trajectory overfitting
         transform.localPosition = arenaCenter + new Vector3(
             Random.Range(-arenaSize.x * 0.4f, -arenaSize.x * 0.2f),
             Random.Range(-arenaSize.y * 0.3f, arenaSize.y * 0.3f),
@@ -52,7 +51,7 @@ public class DroneAgent : Agent
         );
         transform.localRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
-        // 4. Reset Target Position (Right Goal Zone)
+        // spawn goal zone on opposing right flank
         targetTransform.localPosition = arenaCenter + new Vector3(
             Random.Range(arenaSize.x * 0.2f, arenaSize.x * 0.4f),
             Random.Range(-arenaSize.y * 0.3f, arenaSize.y * 0.3f),
@@ -73,7 +72,7 @@ public class DroneAgent : Agent
             obs.tag = "Obstacle";
             obs.transform.SetParent(this.transform.parent != null ? this.transform.parent : null);
 
-            // Spawn in middle zone
+            // restrict obstacle placement to center corridors between start and end
             obs.transform.localPosition = arenaCenter + new Vector3(
                 Random.Range(-arenaSize.x * 0.2f, arenaSize.x * 0.2f),
                 Random.Range(-arenaSize.y * 0.4f, arenaSize.y * 0.4f),
@@ -109,16 +108,16 @@ public class DroneAgent : Agent
     {
         Vector3 relativeTarget = targetTransform.localPosition - transform.localPosition;
 
-        // Relative Vector to Target (3)
+        // 12 observation vectors
+        // target relative offset
+        // target heading vector (normalized)
+        // linear velocity
+        // angular velocity
         sensor.AddObservation(relativeTarget);
-
-        // Normalized Direction Vector to Target (3) -> Direct heading signal
         sensor.AddObservation(relativeTarget.normalized);
-
-        // Velocities (6)
         sensor.AddObservation(rb.linearVelocity);
         sensor.AddObservation(rb.angularVelocity);
-    } // TOTAL OBSERVATION SPACE SIZE = 12
+    }
 
     public override void OnActionReceived(ActionBuffers actions)
     {
@@ -132,21 +131,20 @@ public class DroneAgent : Agent
 
         float currentDistance = Vector3.Distance(transform.localPosition, targetTransform.localPosition);
 
-        // Normalized Progress Reward
+        // continuous progress reward based on distance closed since last tick
         float progress = (previousDistanceToTarget - currentDistance) / initialDistanceToTarget;
         AddReward(progress * 1.0f);
         previousDistanceToTarget = currentDistance;
 
-        // Proximity Encouragement (< 3 units away)
+        // terminal proximity bias to discourage hovering outside the goal trigger
         if (currentDistance < 3.0f)
         {
             AddReward(0.005f);
         }
 
-        // Time Penalty
         AddReward(-0.0002f);
 
-        // Out-of-Bounds Fail-Safe
+        // hard reset on boundary breach
         Vector3 posFromCenter = transform.localPosition - arenaCenter;
         if (Mathf.Abs(posFromCenter.x) > arenaSize.x * 0.5f ||
             Mathf.Abs(posFromCenter.y) > arenaSize.y * 0.5f ||
@@ -161,7 +159,6 @@ public class DroneAgent : Agent
     {
         if (other.CompareTag("Target"))
         {
-            // High payout to outweigh collision fear
             SetReward(5.0f);
             EndEpisode();
         }
@@ -178,6 +175,7 @@ public class DroneAgent : Agent
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
+        // manual override controls for debugging input mapping in editor
         ActionSegment<float> continuousActions = actionsOut.ContinuousActions;
         continuousActions[0] = Input.GetAxisRaw("Horizontal");
         continuousActions[1] = Input.GetKey(KeyCode.Space) ? 1f : (Input.GetKey(KeyCode.LeftShift) ? -1f : 0f);
